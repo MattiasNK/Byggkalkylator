@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Scratch & test directories
+scratch/
+test_*.pdf
+test_*.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Streamlit local state
+.streamlit/secrets.toml
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+

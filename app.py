@@ -233,8 +233,8 @@ def render_pdf_export_widget(geo, purchase_plan, costs, chosen_top_plan, shoppin
     Rendrerar en knapp för att generera och ladda ner en komplett PDF-rapport.
     Cachar den genererade PDF-filen så länge konfigurationen är oförändrad.
     """
-    PDF_BUILD_VERSION = "v3.3_sawplan_drawings"
-    config_id = f"{PDF_BUILD_VERSION}_{geo.L}_{geo.B}_{geo.H}_{geo.overhang_kortsida}_{geo.overhang_längssida}_{geo.lower_rail_h}_{geo.n_pairs}_{geo.leg_profile}_{geo.frame_profile}_{chosen_top_plan.get('name', '')}"
+    PDF_BUILD_VERSION = "v3.5_multi_page_sawplan"
+    config_id = f"{PDF_BUILD_VERSION}_{geo.L}_{geo.B}_{geo.H}_{geo.overhang_kortsida}_{geo.overhang_längssida}_{geo.lower_rail_h}_{geo.n_pairs}_{geo.leg_profile}_{geo.frame_profile}_{chosen_top_plan.get('name', '')}_{purchase_plan.get('timber_total_cost', 0)}"
 
     has_valid_pdf = (
         st.session_state.get("cached_pdf_bytes") is not None and
@@ -252,11 +252,15 @@ def render_pdf_export_widget(geo, purchase_plan, costs, chosen_top_plan, shoppin
         )
         if st.button("🔄 Generera om PDF", key=f"regen_pdf_{key_suffix}", use_container_width=True):
             st.session_state["cached_pdf_bytes"] = None
+            st.session_state["cached_pdf_config_id"] = None
             st.rerun()
     else:
         if st.button("📄 Skapa PDF-rapport (med 3D-bild & sågplan)", key=f"gen_pdf_{key_suffix}", use_container_width=True):
             with st.spinner("Ritar 3D-modell och sammanställer PDF-rapport..."):
-                pdf_bytes = generate_pdf_report(
+                import importlib
+                import pdf_export
+                importlib.reload(pdf_export)
+                pdf_bytes = pdf_export.generate_pdf_report(
                     geo=geo,
                     purchase_plan=purchase_plan,
                     costs=costs,

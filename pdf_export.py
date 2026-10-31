@@ -4,6 +4,8 @@ Inkluderar 3D-visualisering, inköpslista, sågplan, kapnota och kostnadsspecifi
 """
 from __future__ import annotations
 import io
+import os
+import shutil
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -127,6 +129,49 @@ def _create_board_pdf_drawing(b, usable_width: float, kerf_mm: int = 5) -> Drawi
             d.add(String(cur_x + rem_w / 2.0, 11.0, f"{b.remaining}", fontName="Helvetica", fontSize=6.5, fillColor=colors.HexColor("#475569"), textAnchor="middle"))
 
     return d
+
+
+def _ensure_browser_for_kaleido():
+    """
+    Säkerställer att Kaleido hittar Chrome eller Chromium (särskilt på Streamlit Community Cloud / Linux).
+    Konfigurerar Chromium-flaggor för säker körning i headless container-miljö.
+    """
+    if not os.environ.get("BROWSER_PATH"):
+        candidates = [
+            "chromium",
+            "chromium-browser",
+            "google-chrome",
+            "google-chrome-stable",
+            "/usr/bin/chromium",
+            "/usr/bin/chromium-browser",
+            "/usr/bin/google-chrome",
+            "/usr/bin/google-chrome-stable",
+            "/usr/lib/chromium/chromium",
+        ]
+        for c in candidates:
+            p = shutil.which(c) or (c if os.path.isfile(c) and os.access(c, os.X_OK) else None)
+            if p:
+                os.environ["BROWSER_PATH"] = p
+                break
+
+    if not os.environ.get("BROWSER_PATH"):
+        try:
+            import kaleido
+            if hasattr(kaleido, "get_chrome_sync"):
+                kaleido.get_chrome_sync()
+        except Exception:
+            pass
+
+    try:
+        import plotly.io as pio
+        if hasattr(pio, "kaleido") and hasattr(pio.kaleido, "scope"):
+            args = list(getattr(pio.kaleido.scope, "chromium_args", []))
+            for req in ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]:
+                if req not in args:
+                    args.append(req)
+            pio.kaleido.scope.chromium_args = tuple(args)
+    except Exception:
+        pass
 
 
 def generate_pdf_report(
@@ -330,6 +375,7 @@ def generate_pdf_report(
     story.append(Paragraph("🎯 <b>3D-Konstruktionsmodell & Mått</b>", section_style))
 
     try:
+        _ensure_browser_for_kaleido()
         fig = build_figure(geo, dark_theme=False, show_dimensions=True)
         img_bytes = fig.to_image(format="png", width=950, height=450, scale=1.3)
         img_io = io.BytesIO(img_bytes)
